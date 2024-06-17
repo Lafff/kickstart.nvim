@@ -1,4 +1,4 @@
---[[
+--[[init
 
 =====================================================================
 ==================== READ THIS BEFORE CONTINUING ====================
@@ -190,6 +190,12 @@ vim.keymap.set('n', '<C-l>', '<C-w><C-l>', { desc = 'Move focus to the right win
 vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
 vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
 
+--Oil.nvim
+vim.keymap.set('n', '-', '<CMD>Oil<CR>', { desc = 'Open parent directory' })
+
+-- better C-u and C-d.
+vim.keymap.set('n', '<C-d>', '<C-d>zz', {})
+vim.keymap.set('n', '<C-u>', '<C-u>zz', {})
 -- [[ Basic Autocommands ]]
 --  See `:help lua-guide-autocommands`
 
@@ -362,6 +368,9 @@ require('lazy').setup({
         extensions = {
           ['ui-select'] = {
             require('telescope.themes').get_dropdown(),
+          },
+          file_browser = {
+            hidden = true,
           },
         },
       }
@@ -715,12 +724,13 @@ require('lazy').setup({
           -- `friendly-snippets` contains a variety of premade snippets.
           --    See the README about individual language/framework/plugin snippets:
           --    https://github.com/rafamadriz/friendly-snippets
-          -- {
-          --   'rafamadriz/friendly-snippets',
-          --   config = function()
-          --     require('luasnip.loaders.from_vscode').lazy_load()
-          --   end,
-          -- },
+          {
+            'rafamadriz/friendly-snippets',
+            config = function()
+              require('luasnip.loaders.from_vscode').load { include = { 'html' } }
+              require('luasnip.loaders.from_vscode').lazy_load()
+            end,
+          },
         },
       },
       'saadparwaiz1/cmp_luasnip',
@@ -735,6 +745,9 @@ require('lazy').setup({
       -- See `:help cmp`
       local cmp = require 'cmp'
       local luasnip = require 'luasnip'
+      luasnip.filetype_extend('javascript', { 'html' })
+      luasnip.filetype_extend('javascriptreact', { 'html' })
+      luasnip.filetype_extend('typescriptreact', { 'html' })
       luasnip.config.setup {}
 
       cmp.setup {
@@ -806,20 +819,30 @@ require('lazy').setup({
     end,
   },
 
+  -- { -- You can easily change to a different colorscheme.
+  --   -- Change the name of the colorscheme plugin below, and then
+  --   -- change the command in the config to whatever the name of that colorscheme is.
+  --   --
+  --   -- If you want to see what colorschemes are already installed, you can use `:Telescope colorscheme`.
+  --   'folke/tokyonight.nvim',
+  --   priority = 1000, -- Make sure to load this before all the other start plugins.
+  --   init = function()
+  --     -- Load the colorscheme here.
+  --     -- Like many other themes, this one has different styles, and you could load
+  --     -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
+  --     vim.cmd.colorscheme 'tokyonight-night'
+  --
+  --     -- You can configure highlights by doing something like:
+  --     vim.cmd.hi 'Comment gui=none'
+  --   end,
+  -- },
   { -- You can easily change to a different colorscheme.
-    -- Change the name of the colorscheme plugin below, and then
-    -- change the command in the config to whatever the name of that colorscheme is.
-    --
-    -- If you want to see what colorschemes are already installed, you can use `:Telescope colorscheme`.
-    'folke/tokyonight.nvim',
+    'catppuccin/nvim',
     priority = 1000, -- Make sure to load this before all the other start plugins.
     init = function()
-      -- Load the colorscheme here.
-      -- Like many other themes, this one has different styles, and you could load
-      -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
-      vim.cmd.colorscheme 'tokyonight-night'
+      vim.o.termguicolors = true
+      vim.cmd.colorscheme 'catppuccin-macchiato'
 
-      -- You can configure highlights by doing something like:
       vim.cmd.hi 'Comment gui=none'
     end,
   },
@@ -896,7 +919,199 @@ require('lazy').setup({
       --    - Treesitter + textobjects: https://github.com/nvim-treesitter/nvim-treesitter-textobjects
     end,
   },
+  {
+    'christoomey/vim-tmux-navigator',
+    cmd = {
+      'TmuxNavigateLeft',
+      'TmuxNavigateDown',
+      'TmuxNavigateUp',
+      'TmuxNavigateRight',
+      'TmuxNavigatePrevious',
+    },
+    keys = {
+      { '<c-h>', '<cmd><C-U>TmuxNavigateLeft<cr>' },
+      { '<c-j>', '<cmd><C-U>TmuxNavigateDown<cr>' },
+      { '<c-k>', '<cmd><C-U>TmuxNavigateUp<cr>' },
+      { '<c-l>', '<cmd><C-U>TmuxNavigateRight<cr>' },
+      { '<c-\\>', '<cmd><C-U>TmuxNavigatePrevious<cr>' },
+    },
+  },
+  {
+    'stevearc/oil.nvim',
+    opts = {},
+    config = function()
+      require('oil').setup {
+        view_options = {
+          show_hidden = true,
+        },
+      }
+    end,
 
+    -- Optional dependencies
+    dependencies = { 'nvim-tree/nvim-web-devicons' },
+  },
+  {
+    {
+      'mfussenegger/nvim-dap',
+      dependencies = {
+        'leoluz/nvim-dap-go',
+        'rcarriga/nvim-dap-ui',
+        'theHamsta/nvim-dap-virtual-text',
+        'nvim-neotest/nvim-nio',
+        'williamboman/mason.nvim',
+        'mfussenegger/nvim-dap-python',
+      },
+      config = function()
+        local dap = require 'dap'
+        local ui = require 'dapui'
+
+        require('dapui').setup()
+        require('dap-go').setup()
+        require('dap-python').setup 'python'
+        local pythonPath = function()
+          local cwd = vim.loop.cwd()
+          if vim.fn.executable(cwd .. '/.venv/bin/python') == 1 then
+            return cwd .. '/.venv/bin/python'
+          else
+            return '/usr/bin/python'
+          end
+        end
+
+        local set_python_dap = function()
+          require('dap-python').setup() -- earlier so setup the various defaults ready to be replaced
+          dap.configurations.python = {
+            {
+              type = 'python',
+              request = 'launch',
+              name = 'Launch file',
+              program = '${file}',
+              pythonPath = pythonPath(),
+            },
+            {
+              type = 'python',
+              request = 'launch',
+              name = 'DAP Django',
+              program = vim.loop.cwd() .. '/manage.py',
+              args = { 'runserver', '--noreload' },
+              justMyCode = false,
+              django = true,
+              console = 'integratedTerminal',
+            },
+            {
+              type = 'python',
+              request = 'attach',
+              name = 'Attach remote',
+              connect = function()
+                return {
+                  host = '127.0.0.1',
+                  port = 5678,
+                }
+              end,
+            },
+            {
+              type = 'python',
+              request = 'launch',
+              name = 'Launch file with arguments',
+              program = '${file}',
+              args = function()
+                local args_string = vim.fn.input 'Arguments: '
+                return vim.split(args_string, ' +')
+              end,
+              console = 'integratedTerminal',
+              pythonPath = pythonPath(),
+            },
+          }
+
+          dap.adapters.python = {
+            type = 'executable',
+            command = pythonPath(),
+            args = { '-m', 'debugpy.adapter' },
+          }
+        end
+
+        set_python_dap()
+        vim.api.nvim_create_autocmd({ 'DirChanged' }, {
+          callback = function()
+            set_python_dap()
+          end,
+        })
+        require('nvim-dap-virtual-text').setup {
+          -- This just tries to mitigate the chance that I leak tokens here. Probably won't stop it from happening...
+          -- display_callback = function(variable)
+          --   local name = string.lower(variable.name)
+          --   local value = string.lower(variable.value)
+          --   if name:match 'secret' or name:match 'api' or value:match 'secret' or value:match 'api' then
+          --     return '*****'
+          --   end
+          --
+          --   if #variable.value > 15 then
+          --     return ' ' .. string.sub(variable.value, 1, 15) .. '... '
+          --   end
+          --
+          --   return ' ' .. variable.value
+          -- end,
+        }
+
+        -- Handled by nvim-dap-go
+        -- dap.adapters.go = {
+        --   type = "server",
+        --   port = "${port}",
+        --   executable = {
+        --     command = "dlv",
+        --     args = { "dap", "-l", "127.0.0.1:${port}" },
+        --   },
+        -- }
+
+        local elixir_ls_debugger = vim.fn.exepath 'elixir-ls-debugger'
+        if elixir_ls_debugger ~= '' then
+          dap.adapters.mix_task = {
+            type = 'executable',
+            command = elixir_ls_debugger,
+          }
+
+          dap.configurations.elixir = {
+            {
+              type = 'mix_task',
+              name = 'phoenix server',
+              task = 'phx.server',
+              request = 'launch',
+              projectDir = '${workspaceFolder}',
+              exitAfterTaskReturns = false,
+              debugAutoInterpretAllModules = false,
+            },
+          }
+        end
+
+        vim.keymap.set('n', '<space>b', dap.toggle_breakpoint)
+        vim.keymap.set('n', '<space>gb', dap.run_to_cursor)
+
+        -- Eval var under cursor
+        vim.keymap.set('n', '<space>?', function()
+          require('dapui').eval(nil, { enter = true })
+        end)
+
+        vim.keymap.set('n', '<F5>', dap.continue)
+        vim.keymap.set('n', '<F11>', dap.step_into)
+        vim.keymap.set('n', '<F10>', dap.step_over)
+        vim.keymap.set('n', '<F12>', dap.step_out)
+        vim.keymap.set('n', '<F9>', dap.step_back)
+        vim.keymap.set('n', '<F8>', dap.restart)
+
+        dap.listeners.before.attach.dapui_config = function()
+          ui.open()
+        end
+        dap.listeners.before.launch.dapui_config = function()
+          ui.open()
+        end
+        dap.listeners.before.event_terminated.dapui_config = function()
+          ui.close()
+        end
+        dap.listeners.before.event_exited.dapui_config = function()
+          ui.close()
+        end
+      end,
+    },
+  },
   -- The following two comments only work if you have downloaded the kickstart repo, not just copy pasted the
   -- init.lua. If you want these files, they are in the repository, so you can just download them and
   -- place them in the correct locations.
